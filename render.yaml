@@ -1,0 +1,19 @@
+# Render Blueprint — ZeroDay (Flask)
+# لوحة التحكم: New > Blueprint واربط الـ repo (المجلد الجذر يجب أن يحتوي هذا الملف).
+# أو: New > Web Service واختر نفس build/start أدناه.
+# ملاحظة: Gunicorn يعمل على Linux (خوادم رندر)؛ على ويندوز للتجربة استخدم: python app.py
+
+services:
+  - type: web
+    name: zeroday-site
+    runtime: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install -r requirements.txt && python seed_data.py
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 2 --timeout 120 app:app
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: FLASK_ENV
+        value: production

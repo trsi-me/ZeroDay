@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}الجدول الزمني — زيرو داي{% endblock %}
+{% block content %}
+<section class="section-block">
+    <h1>جدول زمني للهجمات الموثقة (تعليمي)</h1>
+    <p class="muted">أحداث من 2000 حتى 2024 مستمدة من قاعدة البيانات. يمكنك اللمس السريع بالسنة أو اختيارها من القائمة.</p>
+    <div class="controls-row" style="align-items:flex-start">
+        <div style="flex:1;min-width:200px">
+            <label class="secondary-text" for="year-filter" style="display:block;margin-bottom:6px">تصفية حسب السنة</label>
+            <select id="year-filter">
+                <option value="">كل السنوات</option>
+            </select>
+            <div class="year-chips" id="year-chips" aria-label="فلتر سريع بالسنة"></div>
+        </div>
+        <div>
+            <span class="meta-chip" id="timeline-meta">—</span>
+            <p style="margin-top:10px">
+                <button type="button" class="btn" id="reload-tl">تحديث من الخادم</button>
+            </p>
+        </div>
+    </div>
+</section>
+<div id="timeline-list"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    function esc(s) {
+        return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    }
+    function fillYearsOnce(years) {
+        var sel = document.getElementById("year-filter");
+        if (sel.getAttribute("data-ready") === "1") return;
+        sel.innerHTML = '<option value="">كل السنوات</option>';
+        years.forEach(function (y) {
+            var o = document.createElement("option");
+            o.value = String(y);
+            o.textContent = String(y);
+            sel.appendChild(o);
+        });
+        sel.setAttribute("data-ready", "1");
+    }
+    function buildChips(yearList) {
+        var wrap = document.getElementById("year-chips");
+        wrap.innerHTML = "";
+        var allBtn = document.createElement("button");
+        allBtn.type = "button";
+        allBtn.className = "year-chip";
+        allBtn.setAttribute("data-year", "");
+        allBtn.textContent = "الكل";
+        allBtn.onclick = function () {
+            document.getElementById("year-filter").value = "";
+            syncChipsFromSelect();
+            fetchTl();
+        };
+        wrap.appendChild(allBtn);
+        yearList.forEach(function (y) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "year-chip";
+            b.setAttribute("data-year", String(y));
+            b.textContent = String(y);
+            b.onclick = function () {
+                document.getElementById("year-filter").value = String(y);
+                syncChipsFromSelect();
+                fetchTl();
+            };
+            wrap.appendChild(b);
+        });
+        syncChipsFromSelect();
+    }
+    function render(events, eventsForYears) {
+        var holder = document.getElementById("timeline-list");
+        var meta = document.getElementById("timeline-meta");
+        holder.innerHTML = "";
+        meta.textContent = "عرض " + events.length + " حدثاً";
+        var src = eventsForYears || events;
+        var ys = {};
+        src.forEach(function (e) { ys[e.year] = true; });
+        var yearList = Object.keys(ys).map(Number).sort(function (a, b) { return b - a; });
+        fillYearsOnce(yearList);
+        if (!document.getElementById("year-chips").hasChildNodes()) {
+            buildChips(yearList);
+        }
+        var shell = document.createElement("div");
+        shell.className = "timeline-shell";
+        events.forEach(function (e) {
+            var sec = document.createElement("article");
+            sec.className = "timeline-card";
+            sec.innerHTML =
+                "<h2 style='margin:0 0 10px;font-size:1.2rem'>" + esc(e.year) + " — " + esc(e.title) + "</h2>" +
+                "<p class='body-text'>الجهة المستهدفة: " + esc(e.target) + "</p>" +
+                "<p class='secondary-text'>التأثير: " + esc(e.impact) + "</p>" +
+                "<p class='secondary-text'>نوع الثغرة: " + esc(e.vulnerability_type) + "</p>" +
+                "<p class='muted'>" + esc(e.description) + "</p>" +
+                "<p><span class='badge " + (typeof severityClass === "function" ? severityClass(e.severity) : "badge-medium") + "'>" + esc(e.severity) + "</span></p>";
+            shell.appendChild(sec);
+        });
+        holder.appendChild(shell);
+    }
+    var allEventsCache = null;
+    function fetchTl() {
+        var y = document.getElementById("year-filter").value;
+        var u = "/api/timeline" + (y ? ("?year=" + encodeURIComponent(y)) : "");
+        fetch(u)
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!y && !allEventsCache) {
+                    allEventsCache = d.events;
+                }
+                render(d.events, allEventsCache || d.events);
+                syncChipsFromSelect();
+            })
+            .catch(function () {
+                document.getElementById("timeline-list").innerHTML = "<p class='section-block muted'>تعذّر التحميل.</p>";
+            });
+    }
+    document.getElementById("reload-tl").onclick = fetchTl;
+    function syncChipsFromSelect() {
+        var y = document.getElementById("year-filter").value;
+        document.querySelectorAll("#year-chips .year-chip").forEach(function (btn) {
+            var vy = btn.getAttribute("data-year");
+            btn.classList.toggle("is-on", vy === y || (!y && vy === ""));
+        });
+    }
+    document.getElementById("year-filter").onchange = function () {
+        syncChipsFromSelect();
+        fetchTl();
+    };
+    fetchTl();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}الاختبار — زيرو داي{% endblock %}
+{% block content %}
+<section class="section-block">
+    <h1>اختبار تفاعلي في مفاهيم الزيرو داي</h1>
+    <p class="muted">عشر أسئلة عشوائية من بنك الأسئلة. بعد كل إجابة يظهر التوضيح. تُحفظ النتيجة النهائية في قاعدة البيانات.</p>
+</section>
+<div id="quiz-root">
+    <p class="section-block muted" id="quiz-loading">جاري تحميل الأسئلة…</p>
+    <div id="quiz-area" class="hidden"></div>
+    <div id="quiz-result" class="section-block hidden"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    var questions = [];
+    var index = 0;
+    var score = 0;
+
+    function levelFor(s, t) {
+        var p = s / t;
+        if (p < 0.4) return "مبتدئ";
+        if (p < 0.75) return "متوسط";
+        return "متقدم";
+    }
+
+    function showFinish() {
+        var area = document.getElementById("quiz-area");
+        area.classList.add("hidden");
+        var res = document.getElementById("quiz-result");
+        res.classList.remove("hidden");
+        var lv = levelFor(score, questions.length);
+        res.innerHTML =
+            "<div class='quiz-head'><div class='quiz-progress'><div class='quiz-progress-fill' style='width:100%'></div></div></div>" +
+            "<h2>انتهى الاختبار</h2>" +
+            "<p class='lead'>الدرجة: " + score + " / " + questions.length + "</p>" +
+            "<p class='body-text'>المستوى المقترح: " + lv + "</p>" +
+            "<p style='margin-top:14px'><a class='btn btn-primary' href='/quiz'>إعادة المحاولة</a></p>";
+        fetch("/api/quiz/result", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ score: score, total: questions.length, level: lv }),
+        }).catch(function () {});
+    }
+
+    function renderQuestion() {
+        if (index >= questions.length) {
+            showFinish();
+            return;
+        }
+        var q = questions[index];
+        var area = document.getElementById("quiz-area");
+        var optsHtml = "";
+        q.options.forEach(function (o) {
+            optsHtml += "<button type='button' class='quiz-option' data-key='" + o.key + "'>" + o.key + ") " + o.text + "</button>";
+        });
+        area.innerHTML =
+            '<div class="quiz-head">' +
+            '<div class="quiz-progress"><div class="quiz-progress-fill" style="width:' + ((index / questions.length) * 100) + '%"></div></div>' +
+            '<div class="quiz-dots">' + questions.map(function (_, j) {
+                var c = "quiz-dot";
+                if (j < index) c += " is-done";
+                if (j === index) c += " is-current";
+                return "<span class='" + c + "' title='سؤال " + (j + 1) + "'></span>";
+            }).join("") + "</div></div>" +
+            "<section class='section-block'><h2 style='margin:8px 0 16px'>" + q.question + "</h2>" +
+            "<div id='opts'>" + optsHtml + "</div>" +
+            "<div id='fb' class='hidden' style='margin-top:12px'></div></section>";
+
+        area.querySelectorAll(".quiz-option").forEach(function (btn) {
+            btn.onclick = function () {
+                var picked = btn.getAttribute("data-key");
+                var ok = picked === q.correct_answer;
+                if (ok) score++;
+                area.querySelectorAll(".quiz-option").forEach(function (b) {
+                    b.disabled = true;
+                    var k = b.getAttribute("data-key");
+                    if (k === q.correct_answer) b.classList.add("correct");
+                    else if (k === picked) b.classList.add("wrong");
+                });
+                var fb = area.querySelector("#fb");
+                fb.classList.remove("hidden");
+                fb.innerHTML =
+                    "<p class='body-text'>" + (ok ? "إجابة صحيحة." : "إجابة غير صحيحة.") + "</p>" +
+                    "<p class='secondary-text'>" + q.explanation + "</p>" +
+                    "<button type='button' class='btn btn-primary' id='nextq'>التالي</button>";
+                document.getElementById("nextq").onclick = function () {
+                    index++;
+                    renderQuestion();
+                };
+            };
+        });
+    }
+
+    fetch("/api/quiz")
+        .then(function (r) {
+            if (!r.ok) throw new Error();
+            return r.json();
+        })
+        .then(function (d) {
+            questions = d.questions;
+            document.getElementById("quiz-loading").classList.add("hidden");
+            document.getElementById("quiz-area").classList.remove("hidden");
+            renderQuestion();
+        })
+        .catch(function () {
+            document.getElementById("quiz-loading").textContent = "لا يمكن تحميل الاختبار.";
+        });
+})();
+</script>
+{% endblock %}

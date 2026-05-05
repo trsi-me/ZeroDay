@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}قاعدة الثغرات — زيرو داي{% endblock %}
+{% block content %}
+<section class="section-block">
+    <h1>قاعدة بيانات الثغرات</h1>
+    <p class="muted">بحث وفلترة في سجل الثغرات التعليمي. البيانات مخزّنة محلياً في SQLite.</p>
+</section>
+
+<section class="section-block">
+    <div class="controls-row">
+        <input type="search" id="vuln-search" placeholder="بحث في الاسم أو الوصف أو CVE…" style="min-width:220px;flex:1">
+        <select id="filter-severity">
+            <option value="">كل مستويات الخطورة</option>
+            <option value="حرج">حرج</option>
+            <option value="عالٍ">عالٍ</option>
+            <option value="متوسط">متوسط</option>
+            <option value="منخفض">منخفض</option>
+        </select>
+        <select id="filter-year"></select>
+        <select id="filter-type">
+            <option value="">كل الأنواع</option>
+        </select>
+        <button type="button" class="btn btn-primary" id="vuln-apply">تطبيق</button>
+        <span class="meta-chip" id="vuln-meta" style="align-self:center">—</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>رقم CVE</th>
+                    <th>الاسم</th>
+                    <th>النوع</th>
+                    <th>الخطورة</th>
+                    <th>الأنظمة المتأثرة</th>
+                    <th>السنة</th>
+                    <th>التفاصيل</th>
+                </tr>
+            </thead>
+            <tbody id="vuln-tbody"></tbody>
+        </table>
+    </div>
+    <div class="pager" id="vuln-pager"></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    var page = 1;
+    var typesLoaded = false;
+    var yearSel = document.getElementById("filter-year");
+    yearSel.innerHTML = '<option value="">كل السنوات</option>';
+    var perPage = 10;
+
+    function badgeClass(sev) {
+        return typeof severityClass === "function" ? severityClass(sev) : "badge-medium";
+    }
+
+    function loadTypesOnce() {
+        if (typesLoaded) return;
+        fetch("/api/vulnerabilities?per_page=100&page=1")
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var types = {};
+                var years = {};
+                d.items.forEach(function (i) {
+                    types[i.type] = true;
+                    years[i.year] = true;
+                });
+                var typeSel = document.getElementById("filter-type");
+                Object.keys(types).sort().forEach(function (t) {
+                    var o = document.createElement("option");
+                    o.value = t;
+                    o.textContent = t;
+                    typeSel.appendChild(o);
+                });
+                Object.keys(years).map(Number).sort(function (a,b){return b-a;}).forEach(function (y) {
+                    var o = document.createElement("option");
+                    o.value = String(y);
+                    o.textContent = String(y);
+                    yearSel.appendChild(o);
+                });
+                typesLoaded = true;
+            })
+            .catch(function () {});
+    }
+
+    function renderTable(data) {
+        var meta = document.getElementById("vuln-meta");
+        if (meta) {
+            meta.textContent = "عرض " + data.items.length + " من أصل " + data.total + " — صفحة " + data.page + " / " + data.pages;
+        }
+        var tb = document.getElementById("vuln-tbody");
+        tb.innerHTML = "";
+        data.items.forEach(function (v) {
+            var tr = document.createElement("tr");
+            var sys = (v.affected_systems || "").replace(/</g, "&lt;");
+            tr.innerHTML =
+                "<td>" + (v.cve_id || "") + "</td>" +
+                "<td>" + (v.name || "").replace(/</g, "&lt;") + "</td>" +
+                "<td>" + (v.type || "") + "</td>" +
+                '<td><span class="badge ' + badgeClass(v.severity) + '">' + (v.severity || "") + "</span></td>" +
+                "<td class='secondary-text' style='max-width:220px'>" + sys + "</td>" +
+                "<td>" + (v.year || "") + "</td>" +
+                '<td><a href="/vulnerability/' + v.id + '">رابط</a></td>';
+            tb.appendChild(tr);
+        });
+        var pg = document.getElementById("vuln-pager");
+        pg.innerHTML = "";
+        if (data.pages > 1) {
+            if (page > 1) {
+                var prev = document.createElement("button");
+                prev.className = "btn";
+                prev.textContent = "السابق";
+                prev.onclick = function () { page--; fetchPage(); };
+                pg.appendChild(prev);
+            }
+            var lbl = document.createElement("span");
+            lbl.className = "secondary-text";
+            lbl.textContent = " صفحة " + data.page + " من " + data.pages + " ";
+            pg.appendChild(lbl);
+            if (page < data.pages) {
+                var next = document.createElement("button");
+                next.className = "btn";
+                next.textContent = "التالي";
+                next.onclick = function () { page++; fetchPage(); };
+                pg.appendChild(next);
+            }
+        }
+    }
+
+    function fetchPage() {
+        var q = new URLSearchParams();
+        var s = document.getElementById("vuln-search").value.trim();
+        if (s) q.set("search", s);
+        var sev = document.getElementById("filter-severity").value;
+        if (sev) q.set("severity", sev);
+        var y = document.getElementById("filter-year").value;
+        if (y) q.set("year", y);
+        var t = document.getElementById("filter-type").value;
+        if (t) q.set("type", t);
+        q.set("page", String(page));
+        q.set("per_page", String(perPage));
+        fetch("/api/vulnerabilities?" + q.toString())
+            .then(function (r) { return r.json(); })
+            .then(renderTable)
+            .catch(function () {
+                document.getElementById("vuln-tbody").innerHTML = "<tr><td colspan='7'>تعذّر التحميل</td></tr>";
+            });
+    }
+
+    document.getElementById("vuln-apply").onclick = function () {
+        page = 1;
+        loadTypesOnce();
+        fetchPage();
+    };
+    loadTypesOnce();
+    fetchPage();
+})();
+</script>
+{% endblock %}

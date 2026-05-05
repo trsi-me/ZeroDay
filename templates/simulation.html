@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}المحاكاة — زيرو داي{% endblock %}
+{% block content %}
+<section class="section-block">
+    <h1>محاكاة هجمة الزيرو داي (تعليمية)</h1>
+    <p class="muted">جميع الخطوات تمثيل بصري فقط. لا يُنفَّذ أي كود خبيث حقيقي. يُسجَّل كل تنقيل للخطوة في قاعدة البيانات لأغراض التتبع التعليمي.</p>
+</section>
+
+<div class="scenario-tabs">
+    <button type="button" class="btn btn-primary" id="tab-b">سيناريو المتصفح</button>
+    <button type="button" class="btn" id="tab-m">سيناريو MITM</button>
+    <button type="button" class="btn" id="tab-o">سيناريو نظام التشغيل</button>
+</div>
+
+<div id="panel-browser">
+    <section class="section-block">
+        <h2>سيناريو 1: استغلال ثغرة مرتبطة بالمتصفح</h2>
+        <p class="secondary-text">واجهة متصفح وهمية. اضغط «بدء المحاكاة» لعرض التسلسل.</p>
+        <div class="browser-mock">
+            <div class="browser-bar">
+                <span aria-hidden="true">● ● ●</span>
+                <div class="browser-url" id="mock-url">about:blank</div>
+            </div>
+            <div class="browser-body" id="mock-body">
+                <p class="secondary-text">لم تبدأ المحاكاة بعد.</p>
+            </div>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-start-browser">بدء المحاكاة</button>
+        <div id="browser-steps"></div>
+        <div class="terminal" id="browser-term" aria-live="polite"></div>
+        <div id="browser-summary" class="section-block hidden">
+            <h3>ملخص</h3>
+            <p class="body-text">تم تحقيق سيطرة وهمية عبر سلسلة من خطوات الاستغلال بعد زيارة رابط. في الواقع تُغلق هذه السلاسل بتحديثات المحرك، عزل المواقع، وتقليل صلاحيات العمليات.</p>
+            <p class="muted">وقاية مقترحة: تحديث المتصفح، حظر التنفيذ من مصادر غير موثوقة، استخدام حماية مضادة للاستغلال، وتدريب المستخدمين على الروابط.</p>
+        </div>
+    </section>
+</div>
+
+<div id="panel-mitm" class="hidden">
+    <section class="section-block">
+        <h2>سيناريو 2: اعتراض الشبكة (MITM)</h2>
+        <p class="secondary-text">رسم تخطيطي يوضح موضع المهاجم بين المستخدم والخادم.</p>
+        <div class="mitm-row">
+            <div class="mitm-node">مستخدم</div>
+            <span class="mitm-edge">←</span>
+            <div class="mitm-node">شبكة</div>
+            <span class="mitm-edge">←</span>
+            <div class="mitm-node" id="mitm-attacker">مهاجم</div>
+            <span class="mitm-edge">←</span>
+            <div class="mitm-node">خادم</div>
+        </div>
+        <button type="button" class="btn btn-primary" id="btn-start-mitm">تشغيل المراحل</button>
+        <div id="mitm-steps"></div>
+    </section>
+</div>
+
+<div id="panel-os" class="hidden">
+    <section class="section-block">
+        <h2>سيناريو 3: هجوم يشبه سطر الأوامر</h2>
+        <p class="secondary-text">أوامر وهمية لتوضيح الأفكار — لا تُنفَّذ على جهازك.</p>
+        <button type="button" class="btn btn-primary" id="btn-start-os">بدء الطرفية الوهمية</button>
+        <div class="fake-shell" id="fake-shell" aria-live="polite"></div>
+    </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+    var DELAY_BROWSER_MS = 3500;
+    var DELAY_MITM_MS = 4000;
+    var DELAY_OS_MS = 3200;
+    var DELAY_FIRST_STEP_MS = 1200;
+
+    var browserSteps = [
+        { icon: "link", title: "١ — إعداد الرابط والطعم", explain: "يُجهّز المهاجم صفحة أو مرفقاً يستغل ثغرة يوم-صفر في المحرّك قبل أن يصدر التصحيح العام. غالباً يُرسل عبر بريد أو رسالة تبدو رسمية.", term: "[prep] building landing page for zero-day chain\n[target] browser engine w/o public patch (sim)" },
+        { icon: "globe", title: "٢ — فتح المتصفح وتحميل المستند", explain: "بعد أن ينقر المستخدم، يطلب المتصفح الملفات من الخادم ويبدأ بناء DOM وتشغيل السكربتات كالعادة — هنا يبدأ الخطر لأن المحتوى ضار قبل أن تدركه القوائم السوداء.", term: "[network] GET /page → 200 OK\n[renderer] parsing HTML, schedules script execution" },
+        { icon: "bug", title: "٣ — استغلال في المحرك (محاكاة)", explain: "السكربت يستغل مساراً غير آمنا في تخطيط الرسم أو الذاكرة، فيحصل على تنفيذ تعليمات بصلاحية أعلى داخل عملية المتصفح — منطقياً يسبق أي طلب صلاحيات من المستخدم.", term: "[engine] type confusion / OOB read → write primitive (educational sim)\n[tab] renderer compromised" },
+        { icon: "lock-open", title: "٤ — محاولة الخروج من عزل المتصفح", explain: "الخطوة التالية منطقياً: استغلال ثغرات أخرى أو سلسلة مترابطة للانتقال من «رملة» المتصفح إلى ملفات النظام أو تشغيل أداة مساعدة خارجية (محاكاة تعليمية).", term: "[sandbox] broker IPC abuse (sim)\n[OS] launch helper process stub — not real" },
+        { icon: "door", title: "٥ — بقاء ووصول لاحق", explain: "بعد نجاح السلسلة يُثبت المهاجم آلية بقاء (مهمة مجدولة، خدمة، قناة صادرة) لتجنب الاعتماد على نقرة واحدة — نهاية منطقية لسيناريو متقدم.", term: "[persistence] scheduled task / startup key (sim)\n[done] simulation only — no real changes" }
+    ];
+
+    function svgFor(kind) {
+        if (kind === "link") return '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 13a5 5 0 0 1 0-7l1-1a5 5 0 1 1 7 7l-1 1" stroke="var(--accent-secondary)" stroke-width="2"/><path d="M14 11a5 5 0 0 1 0 7l-1 1a5 5 0 1 1-7-7l1-1" stroke="var(--accent-primary)" stroke-width="2"/></svg>';
+        if (kind === "globe") return '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="var(--accent-secondary)" stroke-width="2"/><path d="M3 12h18M12 3a15 15 0 0 0 0 18M12 3a15 15 0 0 1 0 18" stroke="var(--text-secondary)" stroke-width="1.5"/></svg>';
+        if (kind === "bug") return '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="13" rx="6" ry="5" stroke="var(--warning)" stroke-width="2"/><path d="M12 3v3M8 5l1 2M16 5l-1 2M5 13H2M22 13h-3M6 20l2-2M18 20l-2-2" stroke="var(--text-secondary)" stroke-width="1.5"/></svg>';
+        if (kind === "lock-open") return '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2" stroke="var(--accent-primary)" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="var(--accent-secondary)" stroke-width="2"/></svg>';
+        return '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2" stroke="var(--text-secondary)" stroke-width="2"/><path d="M8 12h8M12 8v8" stroke="var(--accent-primary)" stroke-width="2"/></svg>';
+    }
+
+    function showPanel(id) {
+        document.getElementById("panel-browser").classList.toggle("hidden", id !== "b");
+        document.getElementById("panel-mitm").classList.toggle("hidden", id !== "m");
+        document.getElementById("panel-os").classList.toggle("hidden", id !== "o");
+        ["tab-b", "tab-m", "tab-o"].forEach(function (tid, i) {
+            var el = document.getElementById(tid);
+            var active = (i === 0 && id === "b") || (i === 1 && id === "m") || (i === 2 && id === "o");
+            el.className = active ? "btn btn-primary" : "btn";
+        });
+    }
+    document.getElementById("tab-b").onclick = function () { showPanel("b"); };
+    document.getElementById("tab-m").onclick = function () { showPanel("m"); };
+    document.getElementById("tab-o").onclick = function () { showPanel("o"); };
+
+    var bIndex = 0;
+    document.getElementById("btn-start-browser").onclick = function () {
+        var btnB = document.getElementById("btn-start-browser");
+        btnB.disabled = true;
+        document.getElementById("browser-summary").classList.add("hidden");
+        var holder = document.getElementById("browser-steps");
+        var term = document.getElementById("browser-term");
+        var body = document.getElementById("mock-body");
+        var url = document.getElementById("mock-url");
+        holder.innerHTML = "";
+        term.textContent = "";
+        bIndex = 0;
+        function finishBrowser() {
+            document.getElementById("browser-summary").classList.remove("hidden");
+            btnB.disabled = false;
+        }
+        function next() {
+            if (bIndex >= browserSteps.length) {
+                finishBrowser();
+                return;
+            }
+            var st = browserSteps[bIndex];
+            if (bIndex === 0) {
+                url.textContent = "http://fake-bad.test/exploit";
+            }
+            body.innerHTML = "<p class='body-text'>خطوة " + (bIndex + 1) + " من " + browserSteps.length + ": " + st.title + "</p><p class='secondary-text'>" + st.explain + "</p>";
+            var wrap = document.createElement("div");
+            wrap.className = "sim-step";
+            wrap.innerHTML = "<div>" + svgFor(st.icon) + "</div><div><h3 style='margin:0 0 6px'>" + st.title + "</h3><p class='secondary-text' style='margin:0'>" + st.explain + "</p></div>";
+            holder.appendChild(wrap);
+            term.textContent += (term.textContent ? "\n\n---\n" : "") + st.term;
+            logSimulationStep("browser_chain", bIndex + 1, st.title);
+            bIndex++;
+            if (bIndex >= browserSteps.length) {
+                finishBrowser();
+            } else {
+                setTimeout(next, DELAY_BROWSER_MS);
+            }
+        }
+        setTimeout(next, DELAY_FIRST_STEP_MS);
+    };
+
+    var mitmPhases = [
+        { t: "١ — اتصال يبدو عادياً", d: "المستخدم يفتح موقعاً أو تطبيقاً ويبدأ مصافحة TLS مع خادم يعتقد أنه الهدف الحقيقي." },
+        { t: "٢ — المهاجم في المنتصف", d: "عبر شبكة عامة ضعيفة، DNS مُضلِل، أو موقع بين المضيف والبوابة، تمر الحزم عند الطرف الخبيث قبل الخادم (شرح مبسّط)." },
+        { t: "٣ — اعتراض أو إعادة توجيه ذكية", d: "يُمرَّر الطلب للخادم الحقيقي أحياناً حتى لا ينقطع الموقع، بينما تُنسخ الجلسات أو تُعدَّل استجابات مختارة بصمت." },
+        { t: "٤ — سرقة جلسة أو بيانات", d: "بعد اكتمال السلسلة يمكن أخذ رموز جلسة أو حقول نماذج قبل أن يصل التشفير إلى الطرف الموثوق — ثم يواصل المهاجمان التظاهر بالخدمة الطبيعية." }
+    ];
+    document.getElementById("btn-start-mitm").onclick = function () {
+        var btnM = document.getElementById("btn-start-mitm");
+        btnM.disabled = true;
+        var attacker = document.getElementById("mitm-attacker");
+        var h = document.getElementById("mitm-steps");
+        h.innerHTML = "";
+        mitmPhases.forEach(function (p, i) {
+            setTimeout(function () {
+                if (attacker) attacker.classList.add("is-hot");
+                setTimeout(function () {
+                    if (attacker) attacker.classList.remove("is-hot");
+                }, 900);
+                var d = document.createElement("div");
+                d.className = "sim-step";
+                d.innerHTML = "<div>" + svgFor("globe") + "</div><div><h3 style='margin:0'>" + p.t + "</h3><p class='secondary-text' style='margin:0'>" + p.d + "</p></div>";
+                h.appendChild(d);
+                logSimulationStep("mitm", i + 1, p.t);
+                if (i === mitmPhases.length - 1) {
+                    btnM.disabled = false;
+                }
+            }, i * DELAY_MITM_MS);
+        });
+    };
+
+    var osLines = [
+        { cmd: "whoami → srv-web-01\\appuser", note: "١) التعرف على السياق: حساب خدمة بصلاحيات محدودة — نقطة انطلاق منطقية لسلسلة لاحقة." },
+        { cmd: "netstat -an (sim) | find listening", note: "٢) مناظرة الشبكة والخدمات: أي منفذ مكشوف أو ثقة زائدة مع الشبكة الداخلية؟" },
+        { cmd: "probe_legacy_api (sim) → 500 + leak path", note: "٣) استغلال أو خطأ يكشف مساراً أو إصداراً — غالباً يسبق محاولة يوم-صفر أو سلسلة CVEs." },
+        { cmd: "stage_payload.exe --noop (sim)", note: "٤) تحميل مرحلة وسيطة (وهمية): تمهيد لرفع الامتياز أو الحركة جانبياً في السيناريو الحقيقي." },
+        { cmd: "schtasks /create /tn \"sim\" … (mock)", note: "٥) بقاء: جدولة أو خدمة. آخر خطوة منطقية قبل محاولة مسح آثار جزئية — السجلات تبقى أفضل دفاع للكشف." }
+    ];
+    document.getElementById("btn-start-os").onclick = function () {
+        var btnO = document.getElementById("btn-start-os");
+        btnO.disabled = true;
+        var sh = document.getElementById("fake-shell");
+        sh.textContent = "# جلسة تعليمية وهمية — لا تُنفَّذ أوامر حقيقية\n$ ";
+        osLines.forEach(function (line, i) {
+            setTimeout(function () {
+                sh.textContent += "\n> " + line.cmd + "\n# " + line.note + "\n$ ";
+                sh.scrollTop = sh.scrollHeight;
+                logSimulationStep("os_terminal", i + 1, line.cmd);
+                if (i === osLines.length - 1) {
+                    btnO.disabled = false;
+                }
+            }, i * DELAY_OS_MS);
+        });
+    };
+})();
+</script>
+{% endblock %}

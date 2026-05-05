@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}حول المشروع — زيرو داي{% endblock %}
+{% block content %}
+<section class="section-block">
+    <h1>حول المشروع</h1>
+    <p class="lead">اسم المشروع: موقع تعريفي لهجمة الزيرو داي بشكل متقدم مع محاكاة تعليمية.</p>
+    <p class="muted">الهدف: توفير مصدر عربي منظم يشرح مفهوم الزيرو داي، يربطه بأمثلة موثقة، ويعرض محاكاة بصرية آمنة دون أي استغلال حقيقي.</p>
+    <p class="secondary-text"><strong class="body-text">الجمهور المستهدف:</strong> طلاب كليات الحاسوب والأمن السيبراني، والمهتمون بالتوعية التقنية.</p>
+</section>
+
+<section class="section-block">
+    <h2>المنهجية</h2>
+    <ul class="about-list">
+        <li>تحليل مصطلحات الأمن وربطها بأحداث حقيقية مُختارة بعناية.</li>
+        <li>تصميم قاعدة بيانات SQLite لتغذية واجهة ديناميكية.</li>
+        <li>بناء واجهة RTL بخط محلي واحد ومتسق.</li>
+        <li>محاكاة أمامية فقط مع تسجيل خطوات التعلم في الخادم.</li>
+    </ul>
+</section>
+
+<section class="section-block">
+    <h2>التقنيات المستخدمة</h2>
+    <div class="tech-grid">
+        <div class="tech-cell">
+            <h4>HTML + SVG</h4>
+            <p>هيكل عربي RTL وأيقونات متجهية مضمّنة دون صور خارجية.</p>
+        </div>
+        <div class="tech-cell">
+            <h4>CSS</h4>
+            <p>سمة داكنة موحّدة، شبكات تفاعلية، وبطاقات بظلال خفيفة.</p>
+        </div>
+        <div class="tech-cell">
+            <h4>JavaScript</h4>
+            <p>تفاعل مع REST، عدّ رسومي للإحصائيات، وتبويبات ومسارات تقدم.</p>
+        </div>
+        <div class="tech-cell">
+            <h4>Python / Flask</h4>
+            <p>خادم خفيف يقدّم القوالب وواجهات JSON للبيانات الحية.</p>
+        </div>
+        <div class="tech-cell">
+            <h4>SQLite</h4>
+            <p>تخزين الثغرات، الجدول الزمني، الاختبارات وسجل المحاكاة.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section-block">
+    <h2>مصادر ومراجع أكاديمية ومفتوحة</h2>
+    <ul class="about-list">
+        <li><a href="https://attack.mitre.org/" target="_blank" rel="noopener noreferrer">MITRE ATT&amp;CK</a> — إطار سلوك الخصوم.</li>
+        <li><a href="https://www.cve.org/" target="_blank" rel="noopener noreferrer">CVE Program</a> — معرّفات الثغرات.</li>
+        <li><a href="https://www.first.org/cvss/" target="_blank" rel="noopener noreferrer">CVSS</a> — منهجية تقييم الخطورة.</li>
+        <li><a href="https://nvd.nist.gov/" target="_blank" rel="noopener noreferrer">NVD</a> — تفاصيل وثائقية للثغرات.</li>
+    </ul>
+</section>
+
+<section class="section-block">
+    <h2>معلومات المطوّر</h2>
+    <p class="secondary-text">مشروع تخرج — يمكنك استبدال هذا السطر باسم الطالب، الرقم الجامعي، والإشراف الأكاديمي.</p>
+</section>
+{% endblock %}
