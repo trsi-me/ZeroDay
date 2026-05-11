@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}دليل الحماية — زيرو داي{% endblock %}
+{% block content %}
+<section class="section-block" aria-labelledby="protect-heading">
+    <h1 id="protect-heading">كيف نحمي أنفسنا أمام تهديدات مثل اليوم صفر؟</h1>
+    <p class="lead">لا يوجد «درع واحد» يمنع كل الهجمات، لكن مزيجاً من العادات والإعدادات التقنية يقلّل احتمال الوقوع ويحدّ من الضرر إن حدث اختراق.</p>
+    <p class="muted">القائمة التالية للتوعية العامة — للمؤسسات يُنصح بسياسات رسمية، فرق أمنية، واختبارات دورية.</p>
+    <div class="hero-actions" style="margin-top:16px">
+        <a class="btn btn-primary" href="{{ url_for('soc_page') }}">مركز العمليات الأمنية (توعية)</a>
+        <a class="btn" href="{{ url_for('vulnerabilities_page') }}">اطّلع على الثغرات وخطط التخفيف</a>
+    </div>
+</section>
+
+<section class="section-block">
+    <h2>١ — الأجهزة والبرامج</h2>
+    <ul class="protect-list">
+        <li><strong>التفعيل التلقائي للتحديثات</strong> للنظام والمتصفح والتطبيقات الحساسة (البريد، الأوفيس، مضاد الفيروسات إن وُجد).</li>
+        <li><strong>إزالة البرامج غير المستخدمة</strong> وتعطيل الخدمات التي لا تحتاجها — كل برنامج إضافي سطح هجوم.</li>
+        <li><strong>تشفير القرص</strong> على الحاسوب المحمول والهاتف يقلل خطر تسريب البيانات عند السرقة أو الضياع.</li>
+    </ul>
+</section>
+
+<section class="section-block">
+    <h2>٢ — الحسابات وكلمات المرور</h2>
+    <ul class="protect-list">
+        <li><strong>المصادقة متعددة العوامل (MFA)</strong> على البريد، الحسابات المالية، ومواقع العمل — أهم خطوة بعد كلمة مرور قوية.</li>
+        <li><strong>مدير كلمات مرور</strong> لتوليد كلمات فريدة طويلة دون تكرارها بين المواقع.</li>
+        <li><strong>مراجعة الأجهزة والجلسات النشطة</strong> في إعدادات الحساب (Google، Microsoft، إلخ) وإلغاء ما لا تعرفه.</li>
+    </ul>
+</section>
+
+<section class="section-block">
+    <h2>٣ — الشبكة والتصفح</h2>
+    <ul class="protect-list">
+        <li><strong>شبكة Wi‑Fi محمية</strong> بكلمة مرور قوية؛ تجنّب إدخال بيانات حساسة على شبكات عامة غير موثوقة أو استخدم VPN موثوقاً عند الضرورة.</li>
+        <li><strong>عدم تفعيل وصلات أو ملفات مشبوهة</strong> حتى من مرسل يبدو معروفاً — التزييف شائع.</li>
+        <li><strong>التحقق من HTTPS</strong> والنطاق الصحيح قبل تسجيل الدخول، خاصة للبنوك والبريد.</li>
+    </ul>
+</section>
+
+<section class="section-block">
+    <h2>٤ — البريد والهندسة الاجتماعية</h2>
+    <ul class="protect-list">
+        <li><strong>لا تُسرّع بالرد</strong> على رسائل تطلب «التحقق العاجل» أو تحويل أموال — اتصل بالجهة عبر قناة رسمية.</li>
+        <li><strong>تصيّد (Phishing)</strong> قد يستغل ثغرات يوم صفر في برمجيات قديمة؛ التحديث + الحذر يقللان المخاطر معاً.</li>
+    </ul>
+</section>
+
+<section class="section-block">
+    <h2>٥ — النسخ الاحتياطي والاستعادة</h2>
+    <ul class="protect-list">
+        <li><strong>نسخ غير متصل (offline)</strong> أو على خدمة سحابية مع تاريخ إصدارات يحمي من برمجيات الفدية.</li>
+        <li><strong>اختبار الاستعادة</strong> مرة على الأقل — النسخة التي لا تُستعاد لا قيمة لها.</li>
+    </ul>
+</section>
+
+<section class="section-block">
+    <h2>٦ — للفرق والمؤسسات (ملخص)</h2>
+    <ul class="protect-list">
+        <li>جرد الأصول، إدارة الثغرات، وتصحيح حرج خلال أيام وليس أشهر.</li>
+        <li>تجزئة الشبكة، صلاحيات أقلّ قدر ممكن، وسجلات مركزية مع تنبيهات.</li>
+        <li>خطة استجابة للحوادث وتدريب دوري للموظفين.</li>
+    </ul>
+    <p class="secondary-text" style="margin-top:14px">في صفحة كل ثغرة في هذا المشروع ستجد حقل <strong>التخفيف (mitigation)</strong> مرتبطاً بالسجل — اربط القراءة النظرية بما يقدمه المورّد رسمياً.</p>
+</section>
+{% endblock %}

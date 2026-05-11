@@ -115,6 +115,16 @@ def about_page():
     return render_template("about.html")
 
 
+@app.route("/protection")
+def protection_page():
+    return render_template("protection.html")
+
+
+@app.route("/soc")
+def soc_page():
+    return render_template("soc.html")
+
+
 @app.get("/api/vulnerabilities")
 def api_vulnerabilities():
     conn = db.get_db()
@@ -201,6 +211,86 @@ def api_stats():
             "documented_attacks_count": attacks_count,
             "affected_systems_estimate": systems_count,
             "government_attacks_percentage": gov_pct,
+        }
+    )
+
+
+@app.get("/api/soc/snapshot")
+def api_soc_snapshot():
+    """لوحة تعليمية: ملخص من قاعدة المشروع + تغذية مرجعية (لا مراقبة لشبكات حقيقية)."""
+    conn = db.get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) AS c FROM vulnerabilities")
+    vuln_count = cur.fetchone()["c"] or 0
+    cur.execute("SELECT COUNT(*) AS c FROM timeline_events")
+    attacks_count = cur.fetchone()["c"] or 0
+    systems_count = _unique_systems_count(conn)
+    gov_pct = _gov_timeline_ratio(conn)
+
+    cur.execute(
+        """
+SELECT year, title, severity, target
+FROM timeline_events
+ORDER BY year DESC, id DESC
+LIMIT 6
+"""
+    )
+    timeline_rows = cur.fetchall()
+    feed = []
+    for r in timeline_rows:
+        sev = (r["severity"] or "متوسط").strip()
+        feed.append(
+            {
+                "kind": "timeline_ref",
+                "year": r["year"],
+                "severity": sev,
+                "title": r["title"],
+                "context": (r["target"] or "").strip() or "—",
+            }
+        )
+
+    tips = [
+        {
+            "kind": "practice",
+            "severity": "معلوماتي",
+            "title": "مراقبة السجلات والتنبيهات",
+            "context": "ربط مصادر السجلات (SIEM) يسرّع اكتشاف السلاسل غير الاعتيادية.",
+        },
+        {
+            "kind": "practice",
+            "severity": "معلوماتي",
+            "title": "تجزئة الشبكة وأقل صلاحيات",
+            "context": "عزل الأنظمة الحساسة يحد من انتشار المهاجم بعد أول اختراق.",
+        },
+        {
+            "kind": "practice",
+            "severity": "معلوماتي",
+            "title": "التحديثات وإدارة الثغرات",
+            "context": "أولوية للتصحيحات على الأنظمة المعرّضة للإنترنت والخدمات الحرجة.",
+        },
+    ]
+    feed.extend(tips)
+
+    base = vuln_count + attacks_count * 3 + systems_count
+    visibility = min(98, 58 + (base % 28))
+    response_readiness = min(97, 52 + ((base * 7) % 35))
+    hardening = min(96, 60 + ((base * 3) % 30))
+
+    return jsonify(
+        {
+            "disclaimer": "عرض تعليمي فقط — لا يتصل بأنظمتك ولا يرسل بيانات خارج هذا الموقع.",
+            "metrics": {
+                "vulnerabilities_in_db": vuln_count,
+                "timeline_events": attacks_count,
+                "systems_estimate": systems_count,
+                "gov_related_timeline_pct": gov_pct,
+            },
+            "posture": {
+                "visibility_score": visibility,
+                "response_readiness": response_readiness,
+                "hardening_index": hardening,
+            },
+            "feed": feed,
         }
     )
 

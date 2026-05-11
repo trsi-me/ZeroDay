@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}مركز العمليات الأمنية — زيرو داي{% endblock %}
+{% block content %}
+<section class="soc-hero section-block">
+    <h1>مركز العمليات الأمنية — عرض توعوي</h1>
+    <p class="lead">هذه اللوحة <strong>لا تراقب شبكتك</strong> ولا تتصل بأجهزتك. تجمع أرقاماً من قاعدة بيانات المشروع وتعرض <strong>تغذية مرجعية</strong> مرتبطة بالجدول الزمني وممارسات الدفاع.</p>
+    <p class="soc-disclaimer" id="soc-disclaimer-banner" role="status">جاري التحميل…</p>
+    <div class="hero-actions" style="margin-top:16px">
+        <a class="btn btn-primary" href="{{ url_for('protection_page') }}">دليل الحماية للأفراد والفرق</a>
+        <a class="btn" href="{{ url_for('timeline_page') }}">الجدول الزمني الكامل</a>
+    </div>
+</section>
+
+<section class="section-block">
+    <h2>مؤشرات ملخّصة (من بيانات الموقع)</h2>
+    <div class="soc-metrics" id="soc-metrics">
+        <p class="muted">جاري التحميل…</p>
+    </div>
+</section>
+
+<section class="section-block">
+    <h2>وضع الدفاع — محاكاة تفاعلية</h2>
+    <p class="muted">فعّل أو عطّل عناصر التحكم أدناه لمحاكاة قرارات مركز العمليات. التغيير يحدّث المؤشرات <strong>على المتصفح فقط</strong> لغرض التوضيح.</p>
+    <div class="soc-controls" id="soc-controls">
+        <label class="soc-toggle">
+            <input type="checkbox" data-control="siem" checked>
+            <span>تجميع السجلات والتنبيهات (SIEM)</span>
+        </label>
+        <label class="soc-toggle">
+            <input type="checkbox" data-control="edr" checked>
+            <span>حماية طرفيات متقدمة (EDR)</span>
+        </label>
+        <label class="soc-toggle">
+            <input type="checkbox" data-control="patch" checked>
+            <span>برنامج تصحيحات حرج خلال ٧ أيام</span>
+        </label>
+        <label class="soc-toggle">
+            <input type="checkbox" data-control="ir" checked>
+            <span>خطة استجابة للحوادث مجربة</span>
+        </label>
+        <label class="soc-toggle">
+            <input type="checkbox" data-control="segment" checked>
+            <span>تجزئة الشبكة والوصول المقيّد</span>
+        </label>
+    </div>
+    <div class="soc-posture-bars" id="soc-posture-bars" aria-live="polite">
+        <p class="muted">اضبط العناصر أعلاه لتحديث المؤشرات.</p>
+    </div>
+</section>
+
+<section class="section-block">
+    <h2>تغذية مرجعية — دفاع ومراقبة تهديدات</h2>
+    <p class="secondary-text" style="margin-bottom:14px">عناصر من الجدول الزمني في المشروع + نصائح ممارسات. ليست تنبيهات فنية حية.</p>
+    <div class="soc-feed" id="soc-feed">
+        <p class="muted">جاري التحميل…</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var metricsEl = document.getElementById("soc-metrics");
+    var feedEl = document.getElementById("soc-feed");
+    var bannerEl = document.getElementById("soc-disclaimer-banner");
+    var postureEl = document.getElementById("soc-posture-bars");
+    var basePosture = null;
+
+    function sevClass(sev) {
+        var t = String(sev || "").toLowerCase();
+        if (t.indexOf("حرج") !== -1 || t.indexOf("critical") !== -1 || t.indexOf("عال") !== -1) return "soc-sev-high";
+        if (t.indexOf("منخفض") !== -1 || t.indexOf("low") !== -1 || t.indexOf("معلومات") !== -1) return "soc-sev-info";
+        if (t.indexOf("متوسط") !== -1 || t.indexOf("medium") !== -1) return "soc-sev-med";
+        return "soc-sev-med";
+    }
+
+    function renderMetrics(m) {
+        metricsEl.innerHTML =
+            '<div class="soc-metric-card"><span class="soc-metric-value">' + m.vulnerabilities_in_db + '</span><span class="soc-metric-label">ثغرات في القاعدة</span></div>' +
+            '<div class="soc-metric-card"><span class="soc-metric-value">' + m.timeline_events + '</span><span class="soc-metric-label">أحداث في الجدول الزمني</span></div>' +
+            '<div class="soc-metric-card"><span class="soc-metric-value">' + m.systems_estimate + '</span><span class="soc-metric-label">تقدير أنظمة مذكورة</span></div>' +
+            '<div class="soc-metric-card"><span class="soc-metric-value">' + m.gov_related_timeline_pct + '%</span><span class="soc-metric-label">نسبة أحداث بأهداف حكومية/مشابهة</span></div>';
+    }
+
+    function renderFeed(items) {
+        feedEl.innerHTML = "";
+        items.forEach(function (item) {
+            var row = document.createElement("article");
+            row.className = "soc-feed-row";
+            var badge = document.createElement("span");
+            badge.className = "soc-feed-badge " + sevClass(item.severity);
+            badge.textContent = item.severity;
+            var body = document.createElement("div");
+            body.className = "soc-feed-body";
+            var h = document.createElement("h3");
+            h.textContent = item.title;
+            var p = document.createElement("p");
+            p.className = "secondary-text";
+            if (item.kind === "timeline_ref") {
+                p.textContent = "السنة: " + item.year + " — الهدف/السياق: " + item.context;
+            } else {
+                p.textContent = item.context;
+            }
+            body.appendChild(h);
+            body.appendChild(p);
+            row.appendChild(badge);
+            row.appendChild(body);
+            feedEl.appendChild(row);
+        });
+    }
+
+    function clamp(n, lo, hi) {
+        return Math.max(lo, Math.min(hi, n));
+    }
+
+    function renderPosture() {
+        if (!basePosture) return;
+        var inputs = document.querySelectorAll("#soc-controls input[type=checkbox]");
+        var on = 0;
+        inputs.forEach(function (inp) { if (inp.checked) on++; });
+        var factor = on / inputs.length;
+        var vis = clamp(Math.round(basePosture.visibility_score * (0.72 + 0.28 * factor)), 40, 99);
+        var resp = clamp(Math.round(basePosture.response_readiness * (0.7 + 0.3 * factor)), 35, 99);
+        var hard = clamp(Math.round(basePosture.hardening_index * (0.75 + 0.25 * factor)), 40, 99);
+
+        function bar(label, value, colorVar) {
+            return (
+                '<div class="soc-bar-wrap"><div class="soc-bar-label"><span>' + label + '</span><span>' + value + '%</span></div>' +
+                '<div class="soc-bar-track"><div class="soc-bar-fill" style="width:' + value + "%;background:" + colorVar + '"></div></div></div>'
+            );
+        }
+
+        postureEl.innerHTML =
+            bar("رؤية ومراقبة (محاكاة)", vis, "linear-gradient(90deg, var(--accent-secondary), var(--accent-teal))") +
+            bar("جاهزية الاستجابة (محاكاة)", resp, "linear-gradient(90deg, var(--accent-tertiary), var(--accent-secondary))") +
+            bar("تصلّب البيئة (محاكاة)", hard, "linear-gradient(90deg, var(--accent-amber), var(--success))");
+    }
+
+    document.querySelectorAll("#soc-controls input[type=checkbox]").forEach(function (inp) {
+        inp.addEventListener("change", renderPosture);
+    });
+
+    fetch("/api/soc/snapshot")
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            bannerEl.textContent = data.disclaimer || "";
+            renderMetrics(data.metrics);
+            basePosture = data.posture;
+            renderPosture();
+            renderFeed(data.feed || []);
+        })
+        .catch(function () {
+            bannerEl.textContent = "تعذّر تحميل بيانات اللوحة.";
+            metricsEl.innerHTML = '<p class="muted">خطأ في الشبكة.</p>';
+            feedEl.innerHTML = '<p class="muted">تعذّر تحميل التغذية.</p>';
+        });
+})();
+</script>
+{% endblock %}
