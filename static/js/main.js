@@ -125,7 +125,116 @@ function initMobileNav() {
     });
 }
 
+function initUrlCheck() {
+    var form = document.getElementById("url-check-form");
+    if (!form) return;
+
+    var input = document.getElementById("url-input");
+    var btn = document.getElementById("url-check-btn");
+
+    var result = document.getElementById("url-check-result");
+    var pill = document.getElementById("url-check-pill");
+    var statusEl = document.getElementById("url-check-status");
+    var scoreEl = document.getElementById("url-check-score");
+    var reasonsEl = document.getElementById("url-check-reasons");
+    var openLink = document.getElementById("url-open-link");
+    var copyBtn = document.getElementById("url-copy-btn");
+    var blockedEl = document.getElementById("url-check-blocked");
+
+    var lastNormalized = "";
+
+    function setLoading(loading) {
+        if (btn) btn.disabled = loading;
+        if (btn) btn.textContent = loading ? "جاري الفحص…" : "فحص";
+    }
+
+    function escapeHtml(s) {
+        return String(s || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function show(res) {
+        result.classList.remove("hidden");
+        pill.classList.remove("is-safe", "is-suspicious");
+        blockedEl.classList.add("hidden");
+        if (openLink) openLink.classList.remove("hidden");
+
+        if (!res || !res.ok) {
+            statusEl.textContent = "خطأ";
+            scoreEl.textContent = "";
+            pill.classList.add("is-suspicious");
+            reasonsEl.innerHTML = "<li>" + escapeHtml((res && res.message) || "تعذّر فحص الرابط.") + "</li>";
+            if (openLink) openLink.classList.add("hidden");
+            lastNormalized = "";
+            return;
+        }
+
+        var isSuspicious = res.verdict === "suspicious";
+        pill.classList.add(isSuspicious ? "is-suspicious" : "is-safe");
+        statusEl.textContent = res.label || (isSuspicious ? "مشبوه" : "آمن");
+        scoreEl.textContent = (res.score != null ? String(res.score) : "0") + "/100";
+        lastNormalized = res.normalized || "";
+
+        var reasons = Array.isArray(res.reasons) ? res.reasons : [];
+        if (reasons.length === 0) reasons = ["لا توجد تفاصيل إضافية."];
+        reasonsEl.innerHTML = reasons.map(function (r) { return "<li>" + escapeHtml(r) + "</li>"; }).join("");
+
+        if (openLink) {
+            openLink.href = lastNormalized || "#";
+            openLink.textContent = "فتح الرابط";
+        }
+
+        // Prevent direct opening for high-risk URLs.
+        if (res.can_open === false) {
+            if (openLink) openLink.classList.add("hidden");
+            blockedEl.classList.remove("hidden");
+        }
+    }
+
+    form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var raw = (input && input.value ? input.value : "").trim();
+        if (!raw) return;
+        setLoading(true);
+        fetch("/api/url/check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: raw }),
+        })
+            .then(function (r) { return r.json().catch(function () { return { ok: false, message: "استجابة غير صالحة." }; }); })
+            .then(function (res) { show(res); })
+            .catch(function () { show({ ok: false, message: "تعذّر الاتصال بالخادم." }); })
+            .finally(function () { setLoading(false); });
+    });
+
+    if (copyBtn) {
+        copyBtn.addEventListener("click", function () {
+            var txt = lastNormalized || (input && input.value ? String(input.value).trim() : "");
+            if (!txt) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).catch(function () {});
+            } else {
+                try {
+                    var tmp = document.createElement("textarea");
+                    tmp.value = txt;
+                    tmp.style.position = "fixed";
+                    tmp.style.left = "-9999px";
+                    document.body.appendChild(tmp);
+                    tmp.focus();
+                    tmp.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(tmp);
+                } catch (e) {}
+            }
+        });
+    }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
     initMobileNav();
     initPhaseTabs(document.querySelector(".phase-deck"));
+    initUrlCheck();
 });

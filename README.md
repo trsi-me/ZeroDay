@@ -247,6 +247,43 @@ python app.py
 }
 ```
 
+### `POST /api/url/check` — فحص دفاعي للروابط (ذكي + Threat Intel)
+
+هذا المسار يوفّر ميزة دفاعية عملية: **إدخال رابط** ثم تصنيف **آمن/مشبوه** مع **درجة خطورة** وأسباب، مع **منع فتح الروابط عالية الخطورة مباشرة** على واجهة الصفحة الرئيسية.
+
+يعتمد الحكم على:
+
+- قواعد محلّية (HTTPS، مختصرات الروابط، Punycode، IP داخلي/محجوز، طول الرابط…)
+- **Threat Intelligence حقيقي** عبر خدمة **URLhaus** (مجانية) للتحقق إن كان الرابط مُبلّغًا عنه
+- خيار **VirusTotal** (اختياري) إذا تم توفير مفتاح API
+
+**جسم JSON:**
+
+```json
+{ "url": "https://example.com/path?q=1" }
+```
+
+**استجابة مختصرة:**
+
+```json
+{
+  "ok": true,
+  "normalized": "https://example.com/path?q=1",
+  "host": "example.com",
+  "score": 12,
+  "verdict": "safe",
+  "label": "آمن",
+  "can_open": true,
+  "reasons": ["..."],
+  "intel": [
+    { "provider": "urlhaus", "available": true, "query_status": "no_results", "malicious": false },
+    { "provider": "virustotal", "available": false, "reason": "missing_api_key" }
+  ]
+}
+```
+
+**ملاحظة مهمة:** نتيجة الفحص **مؤشر احتمالي** (Risk Scoring) وليست بديلاً عن تحليلات المؤسسة (Proxy/SWG/EDR/SIEM). الهدف أكاديمي دفاعي وتعليمي.
+
 ---
 
 ## 10. مقتطفات من الكود مع الشرح
@@ -412,6 +449,12 @@ if cur.fetchone()["c"] > 0:
 
 **كيف أفرغ قاعدة البيانات لإعادة البذر؟**  
 احذف ملف `zerodaydb.sqlite` ثم شغّل `python seed_data.py` من جديد (مع التأكد من إغلاق التطبيق أولاً).
+
+**كيف أفعل فحص VirusTotal داخل ميزة فحص الرابط؟**  
+ضع مفتاحك في متغير البيئة `VIRUSTOTAL_API_KEY` ثم أعد تشغيل التطبيق. عندها سيظهر ضمن `intel` عدّاد محرّكات الفحص.
+
+**كيف أفعل فحص URLhaus (Threat Intel) داخل ميزة فحص الرابط؟**  
+أنشئ مفتاحك المجاني من `abuse.ch` ثم ضعه في متغير البيئة `URLHAUS_AUTH_KEY` وأعد تشغيل التطبيق. بدون ذلك سيبقى الفحص المحلي فعّالًا لكن دون تحقق خارجي.
 
 ---
 
