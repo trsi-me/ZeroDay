@@ -733,9 +733,9 @@ table tbody tr:focus-within {
 
 .hero {
     display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 28px;
-    align-items: center;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    align-items: stretch;
     margin: 8px 0 28px;
     padding: 28px 24px;
     background: linear-gradient(155deg, rgba(15, 22, 41, 0.95), rgba(21, 29, 51, 0.88));
@@ -757,13 +757,11 @@ table tbody tr:focus-within {
 }
 
 .hero-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    width: 100%;
 }
 
 .url-check {
-    width: min(420px, 100%);
+    width: 100%;
     padding: 18px 18px 16px;
     border-radius: 12px;
     border: 1px solid var(--border-color);
